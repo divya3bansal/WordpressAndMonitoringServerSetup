@@ -1,0 +1,91 @@
+- name: Creating configuration file for prometheus
+  hosts: localhost
+  tasks:
+   - name: Create a new file
+     blockinfile:
+      path: ./prometheus.yml
+      create: yes  
+      block: |
+       global:
+         scrape_interval:     15s # By default, scrape targets every 15 seconds.
+         evaluation_interval: 15s # Evaluate rules every 15 seconds.
+
+         # Attach these extra labels to all timeseries collected by this Prometheus instance.
+         external_labels:
+           monitor: 'codelab-monitor'
+
+       scrape_configs:
+         - job_name: 'prometheus'
+           static_configs:
+             - targets: ['localhost:9090']
+
+         - job_name: 'cadvisor'
+           static_configs:
+             - targets: ['172.17.0.4:8080']
+
+
+- name: Run mysql container
+  hosts: localhost
+  vars:
+   DOCKER_SQL_IMAGE: "mysql:5.7"
+  tasks:
+   - name: Create a mysql image container
+     docker_container:
+      name : mysql
+      image: "{{ DOCKER_SQL_IMAGE }}"
+      state: started
+      env:
+       MYSQL_ROOT_PASSWORD: somewordpress
+       MYSQL_DATABASE: wordpress
+       MYSQL_USER: wordpress
+       MYSQL_PASSWORD: wordpress
+
+- name: Run wordpress container
+  hosts: localhost
+  vars:
+   DOCKER_WORDPRESS_IMAGE: "wordpress:latest"
+  tasks:
+   - name: Create a wordpress image container
+     docker_container:
+      name: wordpress
+      image: "{{ DOCKER_WORDPRESS_IMAGE }}"
+      state: started
+      ports:
+       - "8000:8000"
+     env:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+
+- name: Run cadvisor container
+  hosts: localhost
+  vars:
+   DOCKER_CADVISOR_IMAGE: "google/cadvisor:latest"
+  tasks:
+   - name: Create a wordpress image container
+     docker_container:
+      name: cadvisor
+      image: "{{ DOCKER_CADVISOR_IMAGE }}"
+      state: started
+      ports:
+       - "8080:8080"
+      volumes:
+       - /:/rootfs:ro
+       - /var/run:/var/run:rw
+       - /sys:/sys:ro
+       - /var/lib/docker/:/var/lib/docker:ro
+
+- name: Run prometheus container
+  hosts: localhost
+  vars:
+   DOCKER_PROMETHEUS_IMAGE: "prom/prometheus"
+  tasks:
+   - name: Create a prometheus image container
+     docker_container:
+      name: prometheus
+      image: "{{ DOCKER_PROMETHEUS_IMAGE }}"
+      state: started
+      volumes:
+       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      ports:
+       - '9090:9090'
