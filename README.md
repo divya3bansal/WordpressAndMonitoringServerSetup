@@ -1,10 +1,8 @@
 #--------------------------
-# ASSIGNMENT TO DO
+# TO DO
 #--------------------------
 
-# Using a language of your choice, 
-# write a script to set up a Wordpress & monitoring server,
-# and share the script for further discussion."
+# write a script to set up a Wordpress & monitoring server
 
 ###########################################
 Files provided:
